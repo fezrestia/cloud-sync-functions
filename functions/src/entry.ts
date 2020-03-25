@@ -19,6 +19,8 @@ const chromeArgs = [
   "--incognito",
 ];
 
+const TARGET_REGION = "asia-northeast1";
+
 export const checkStatus = functions
     .runWith(runtimeConfig)
     .https
@@ -38,6 +40,7 @@ const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
 
 export const updateDcmStats = functions
     .runWith(runtimeConfig)
+    .region(TARGET_REGION)
     .https
     .onRequest( async (request, response) => {
       try {
@@ -45,10 +48,28 @@ export const updateDcmStats = functions
             args: chromeArgs,
             headless: true,
         } );
+
         const page = await browser.newPage();
+        page.setDefaultTimeout(60000); // 1 min.
+        // Filter out unnecessary request.
+        page.setRequestInterception(true);
+        page.on("request", (interceptedRequest) => {
+          const targetUrl = interceptedRequest.url();
+
+          const isNotDcm = !targetUrl.includes("docomo");
+          const isPng = targetUrl.endsWith(".png");
+          const isJpg = targetUrl.endsWith(".jpg");
+          const isGif = targetUrl.endsWith(".gif");
+
+          if (isNotDcm || isPng || isJpg || isGif) {
+            interceptedRequest.abort();
+          } else {
+            interceptedRequest.continue();
+          }
+        } );
 
         // Top page.
-        await page.goto(DCM_TOP_URL);
+        await page.goto(DCM_TOP_URL, { waitUntil: "networkidle0" });
 
         // Search login URL.
         const links: ElementHandle[] = await page.$$("a");
