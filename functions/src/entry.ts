@@ -28,6 +28,8 @@ const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
 
+const DCM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/dcm-sim-usage/logs";
+
 export const updateDcmStats = functions
     .runWith(runtimeConfig)
     .region(TARGET_REGION)
@@ -95,7 +97,28 @@ export const updateDcmStats = functions
 
         await browser.close();
 
-        response.send(`month=${monthUsed}, yesterday=${yesterdayUsed}`);
+        // Firebase DB target path.
+        const today = genJstDate();
+        const yesterday = genJstDate();
+        yesterday.setDate(today.getDate() - 1);
+        const todayPath = genDatePath(today);
+        const yesterdayPath = genDatePath(yesterday);
+        const todayFullPath = `${DCM_FIREBASE_DB_ROOT}/${todayPath}.json`;
+        const yesterdayFullPath = `${DCM_FIREBASE_DB_ROOT}/${yesterdayPath}.json`;
+
+        // Store data.
+        const todayData = {
+          month_used_current: Number(monthUsed) * 1000,
+        };
+        const yesterdayData = {
+          day_used: Number(yesterdayUsed) * 1000,
+        };
+
+
+
+
+
+        response.send(`month=${monthUsed}\nyesterday=${yesterdayUsed}\ntodayPath=${todayFullPath}\nyesterdayPath=${yesterdayFullPath}\ntodayData=${JSON.stringify(todayData)}\nyesterdayData=${JSON.stringify(yesterdayData)}`);
         return;
       } catch(e) {
         response.send(`ERROR: ${e.toString()}`);
@@ -155,6 +178,18 @@ async function genPage(browser: Browser, validUrlPattern: string): Promise<Page>
   } );
 
   return page;
+}
+
+function genJstDate(): Date {
+  const nowUtcMillis = Date.now();
+  const offsetMillis = new Date().getTimezoneOffset() * 60 * 1000; // UTC - Local
+  const nowJstMillis = nowUtcMillis + offsetMillis + (9 * 60 * 60 * 1000); // +0900
+  const nowJst = new Date(nowJstMillis);
+  return nowJst;
+}
+
+function genDatePath(date: Date): string {
+  return `y${date.getFullYear()}/m${date.getMonth() + 1}/d${date.getDate()}`;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
