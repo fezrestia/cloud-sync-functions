@@ -1,23 +1,12 @@
 import * as functions from "firebase-functions";
 
 const puppeteer = require("puppeteer");
-import { ElementHandle } from "puppeteer";
+import { Browser, Page, ElementHandle } from "puppeteer";
 
 const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"1GB"|"2GB" } = {
   timeoutSeconds: 300,
   memory: "512MB"
 };
-
-const chromeArgs = [
-  "--no-sandbox",
-  "--disable-setuid-sandbox",
-  "--disable-dev-shm-usage",
-  "--disable-gpu",
-  "--no-first-run",
-  "--no-zygote",
-  "--single-process",
-  "--incognito",
-];
 
 const TARGET_REGION = "asia-northeast1";
 
@@ -30,11 +19,12 @@ export const checkStatus = functions
 
 
 
-//// DCM SIM STATS ///////////////////////////////////////////////////////////////////////////////
+//// DCM SIM STATS ////////////////////////////////////////////////////////////////////////////////
 //
 //
 
-const DCM_HOST_URL = "https://www.nttdocomo.co.jp"
+const DCM_VALID_URL_PATTERN = "docomo";
+const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
 
@@ -44,29 +34,8 @@ export const updateDcmStats = functions
     .https
     .onRequest( async (request, response) => {
       try {
-        const browser = await puppeteer.launch( {
-            args: chromeArgs,
-            headless: true,
-        } );
-
-        const page = await browser.newPage();
-        page.setDefaultTimeout(60000); // 1 min.
-        // Filter out unnecessary request.
-        page.setRequestInterception(true);
-        page.on("request", (interceptedRequest) => {
-          const targetUrl = interceptedRequest.url();
-
-          const isNotDcm = !targetUrl.includes("docomo");
-          const isPng = targetUrl.endsWith(".png");
-          const isJpg = targetUrl.endsWith(".jpg");
-          const isGif = targetUrl.endsWith(".gif");
-
-          if (isNotDcm || isPng || isJpg || isGif) {
-            interceptedRequest.abort();
-          } else {
-            interceptedRequest.continue();
-          }
-        } );
+        const browser = await genBrowser();
+        const page = await genPage(browser, DCM_VALID_URL_PATTERN);
 
         // Top page.
         await page.goto(DCM_TOP_URL, { waitUntil: "networkidle0" });
@@ -134,5 +103,59 @@ export const updateDcmStats = functions
       }
     } );
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//// UTIL FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
+//
+//
+
+async function genBrowser(): Promise<Browser> {
+  const chromeArgs = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-first-run",
+    "--no-zygote",
+    "--single-process",
+    "--incognito",
+  ];
+
+  const browser = await puppeteer.launch( {
+    args: chromeArgs,
+    headless: true,
+  } );
+
+  return browser;
+}
+
+async function genPage(browser: Browser, validUrlPattern: string): Promise<Page> {
+  const page = await browser.newPage();
+
+  // Timeout = 1 min.
+  page.setDefaultTimeout(60000);
+
+  // Filter out unnecessary request.
+  page.setRequestInterception(true);
+  page.on("request", (interceptedRequest) => {
+    const targetUrl = interceptedRequest.url();
+
+    const isInvalidUrl = !targetUrl.includes(validUrlPattern);
+    const isPng = targetUrl.endsWith(".png");
+    const isJpg = targetUrl.endsWith(".jpg");
+    const isGif = targetUrl.endsWith(".gif");
+
+    if (isInvalidUrl || isPng || isJpg || isGif) {
+      interceptedRequest.abort();
+    } else {
+      interceptedRequest.continue();
+    }
+  } );
+
+  return page;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
