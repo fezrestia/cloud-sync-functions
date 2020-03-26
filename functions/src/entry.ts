@@ -3,6 +3,9 @@ import * as functions from "firebase-functions";
 const puppeteer = require("puppeteer");
 import { Browser, Page, ElementHandle } from "puppeteer";
 
+const https = require("https");
+import { IncomingMessage } from "http";
+
 const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"1GB"|"2GB" } = {
   timeoutSeconds: 300,
   memory: "512MB"
@@ -35,96 +38,122 @@ export const updateDcmStats = functions
     .region(TARGET_REGION)
     .https
     .onRequest( async (request, response) => {
-      try {
-        const browser = await genBrowser();
-        const page = await genPage(browser, DCM_VALID_URL_PATTERN);
+      console.log("## updateDcmStatus() : E");
 
-        // Top page.
-        await page.goto(DCM_TOP_URL, { waitUntil: "networkidle0" });
+      await doUpdateDcmStats( (resMsg: string) => {
+        response.send(resMsg);
+      } );
 
-        // Search login URL.
-        const links: ElementHandle[] = await page.$$("a");
-        let loginLink: ElementHandle|null = null;
-        for (const link of links) {
-          const prop = await link.getProperty("href");
-          const json = await prop.jsonValue();
-          const url = decodeURIComponent(json.toString());
+      console.log("## updateDcmStatus() : X");
+    } );
 
-          if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_TOP_URL)) {
-            if (loginLink !== null) {
-              response.send("ERROR: Over 2 Login Links Detected.");
-              return;
-            }
-            loginLink = link;
-          }
-        }
-        if (loginLink === null) {
-          response.send("ERROR: No Login Link Detected.");
+async function doUpdateDcmStats(onDone: (resMsg: string) => void) {
+  try {
+    const browser = await genBrowser();
+    const page = await genPage(browser, DCM_VALID_URL_PATTERN);
+
+    // Top page.
+    await page.goto(DCM_TOP_URL, { waitUntil: "networkidle0" });
+
+    // Search login URL.
+    const links: ElementHandle[] = await page.$$("a");
+    let loginLink: ElementHandle|null = null;
+    for (const link of links) {
+      const prop = await link.getProperty("href");
+      const json = await prop.jsonValue();
+      const url = decodeURIComponent(json.toString());
+
+      if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_TOP_URL)) {
+        if (loginLink !== null) {
+          onDone("ERROR: Over 2 Login Links Detected.");
           return;
         }
-
-        // Go to Login page.
-        await loginLink.click();
-        await page.waitForNavigation();
-
-        // Input ID.
-        await page.type('input[id="Di_Uid"]', functions.config().dcm.id);
-        const idButton: ElementHandle = await page.$("input.button_submit.nextaction");
-        await idButton.click();
-        await page.waitForNavigation();
-
-        // Input Pass.
-        await page.type('input[id="Di_Pass"]', functions.config().dcm.pass);
-        const passButton: ElementHandle = await page.$("input.button_submit.nextaction");
-        await passButton.click();
-        await page.waitForNavigation();
-
-        // Wait for contents rendering.
-        await page.waitForSelector("section#mydcm_data_data");
-        await page.waitForSelector("section#mydcm_data_3day");
-
-        // Parse month data.
-        const monthElm = await page.$("section#mydcm_data_data div.in-data-use span.card-t-number");
-        const monthProp = await monthElm.getProperty("textContent");
-        const monthJson = await monthProp.jsonValue();
-        const monthUsed: string = monthJson.toString();
-
-        // Parse day data.
-        const yesterdayElm = await page.$("section#mydcm_data_3day div#mydcm_data_3day-03 dl.mydcm_data_3day-03-02 span.card-t-ssnumber");
-        const yesterdayProp = await yesterdayElm.getProperty("textContent");
-        const yesterdayJson = await yesterdayProp.jsonValue();
-        const yesterdayUsed: string = yesterdayJson.toString();
-
-        await browser.close();
-
-        // Firebase DB target path.
-        const today = genJstDate();
-        const yesterday = genJstDate();
-        yesterday.setDate(today.getDate() - 1);
-        const todayPath = genDatePath(today);
-        const yesterdayPath = genDatePath(yesterday);
-        const todayFullPath = `${DCM_FIREBASE_DB_ROOT}/${todayPath}.json`;
-        const yesterdayFullPath = `${DCM_FIREBASE_DB_ROOT}/${yesterdayPath}.json`;
-
-        // Store data.
-        const todayData = {
-          month_used_current: Number(monthUsed) * 1000,
-        };
-        const yesterdayData = {
-          day_used: Number(yesterdayUsed) * 1000,
-        };
-
-
-
-
-
-        response.send(`month=${monthUsed}\nyesterday=${yesterdayUsed}\ntodayPath=${todayFullPath}\nyesterdayPath=${yesterdayFullPath}\ntodayData=${JSON.stringify(todayData)}\nyesterdayData=${JSON.stringify(yesterdayData)}`);
-        return;
-      } catch(e) {
-        response.send(`ERROR: ${e.toString()}`);
-        return;
+        loginLink = link;
       }
-    } );
+    }
+    if (loginLink === null) {
+      onDone("ERROR: No Login Link Detected.");
+      return;
+    }
+
+    // Go to Login page.
+    await loginLink.click();
+    await page.waitForNavigation();
+
+    // Input ID.
+    await page.type('input[id="Di_Uid"]', functions.config().dcm.id);
+    const idButton: ElementHandle = await page.$("input.button_submit.nextaction");
+    await idButton.click();
+    await page.waitForNavigation();
+
+    // Input Pass.
+    await page.type('input[id="Di_Pass"]', functions.config().dcm.pass);
+    const passButton: ElementHandle = await page.$("input.button_submit.nextaction");
+    await passButton.click();
+    await page.waitForNavigation();
+
+    // Wait for contents rendering.
+    await page.waitForSelector("section#mydcm_data_data");
+    await page.waitForSelector("section#mydcm_data_3day");
+
+    // Parse month data.
+    const monthElm = await page.$("section#mydcm_data_data div.in-data-use span.card-t-number");
+    const monthProp = await monthElm.getProperty("textContent");
+    const monthJson = await monthProp.jsonValue();
+    const monthUsed: string = monthJson.toString();
+
+    // Parse day data.
+    const yesterdayElm = await page.$("section#mydcm_data_3day div#mydcm_data_3day-03 dl.mydcm_data_3day-03-02 span.card-t-ssnumber");
+    const yesterdayProp = await yesterdayElm.getProperty("textContent");
+    const yesterdayJson = await yesterdayProp.jsonValue();
+    const yesterdayUsed: string = yesterdayJson.toString();
+
+    await browser.close();
+
+    // Firebase DB target path.
+    const today = genJstDate();
+    const yesterday = genJstDate();
+    yesterday.setDate(today.getDate() - 1);
+    const todayPath = genDatePath(today);
+    const yesterdayPath = genDatePath(yesterday);
+    const todayUrl = `${DCM_FIREBASE_DB_ROOT}/${todayPath}/month_used_current.json`;
+    const yesterdayUrl = `${DCM_FIREBASE_DB_ROOT}/${yesterdayPath}/day_used.json`;
+
+    // Store data. [MB]
+    const todayData: number = Number(monthUsed) * 1000;
+    const yesterdayData: number = Number(yesterdayUsed) * 1000;
+
+    // Update Firebase DB.
+    console.log("## PUT today data.");
+    const todayRes = await asyncPutHttps(todayUrl, todayData);
+    console.log("## PUT yesterday data.");
+    const yesterdayRes = await asyncPutHttps(yesterdayUrl, yesterdayData);
+
+    // Response msg.
+    const resMsg = `
+<pre>
+monthUsed     = ${monthUsed}
+yesterdayUsed = ${yesterdayUsed}
+
+todayUrl      = ${todayUrl}
+yesterdayUrl  = ${yesterdayUrl}
+
+todayData     = ${JSON.stringify(todayData)}
+yesterdayData = ${JSON.stringify(yesterdayData)}
+
+todayRes      = ${todayRes}
+yesterdayRes  = ${yesterdayRes}
+</pre>
+    `;
+
+    onDone(resMsg);
+    return;
+  } catch(e) {
+    onDone(`ERROR: ${e.toString()}`);
+    return;
+  }
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -161,8 +190,8 @@ async function genPage(browser: Browser, validUrlPattern: string): Promise<Page>
   page.setDefaultTimeout(60000);
 
   // Filter out unnecessary request.
-  page.setRequestInterception(true);
-  page.on("request", (interceptedRequest) => {
+  await page.setRequestInterception(true);
+  page.on("request", async (interceptedRequest) => {
     const targetUrl = interceptedRequest.url();
 
     const isInvalidUrl = !targetUrl.includes(validUrlPattern);
@@ -171,9 +200,9 @@ async function genPage(browser: Browser, validUrlPattern: string): Promise<Page>
     const isGif = targetUrl.endsWith(".gif");
 
     if (isInvalidUrl || isPng || isJpg || isGif) {
-      interceptedRequest.abort();
+      await interceptedRequest.abort();
     } else {
-      interceptedRequest.continue();
+      await interceptedRequest.continue();
     }
   } );
 
@@ -190,6 +219,56 @@ function genJstDate(): Date {
 
 function genDatePath(date: Date): string {
   return `y${date.getFullYear()}/m${date.getMonth() + 1}/d${date.getDate()}`;
+}
+
+async function asyncPutHttps(url: string, json: any): Promise<string> {
+  return new Promise<string>( (resolve: (string) => void) => {
+    const options = {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+    };
+
+    const req = https.request(
+        url,
+        options,
+        (res: IncomingMessage) => {
+          console.log("## request.callback() : E");
+          console.log(`## res.statusCode = ${res.statusCode}`);
+          res.setEncoding("utf8");
+
+          res.on("data", (chunk: string|Buffer) => {
+            console.log("## res.on.data()");
+            console.log(`## chunk = ${chunk.toString()}`);
+          } );
+
+          res.on("aborted", () => {
+            console.log("## res.on.aborted()");
+
+            resolve("ERROR : Response Aborted.");
+
+          } );
+
+          res.on("end", () => {
+            console.log("## res.on.end()");
+
+            resolve("OK");
+          } );
+
+          console.log("## request.callback() : X");
+        } );
+
+    req.on("error", (e: Error) => {
+      console.log("## req.on.error()");
+      console.log(e);
+
+      resolve(`ERROR : Exception=${e.toString()}`);
+    } );
+
+    req.write(JSON.stringify(json));
+    req.end();
+  } );
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
