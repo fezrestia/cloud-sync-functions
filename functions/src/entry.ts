@@ -1,4 +1,7 @@
-import * as functions from "firebase-functions";
+const functions = require("firebase-functions");
+import { Request, EventContext } from "firebase-functions";
+
+import * as express from "express";
 
 const puppeteer = require("puppeteer");
 import { Browser, Page, ElementHandle } from "puppeteer";
@@ -12,6 +15,7 @@ const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"
 };
 
 const TARGET_REGION = "asia-northeast1";
+const TARGET_TZ = "Asia/Tokyo";
 
 export const checkStatus = functions
     .runWith(runtimeConfig)
@@ -27,24 +31,46 @@ export const checkStatus = functions
 //
 
 const DCM_VALID_URL_PATTERN = "docomo";
+
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
 
 const DCM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/dcm-sim-usage/logs";
 
-export const updateDcmStats = functions
+const DCM_CRON = "5 */3 * * *"; // min hour day month weekday
+
+// Manual trigger from HTTPS.
+export const httpsUpdateDcmStats = functions
     .runWith(runtimeConfig)
     .region(TARGET_REGION)
     .https
-    .onRequest( async (request, response) => {
-      console.log("## updateDcmStatus() : E");
+    .onRequest( async (request: Request, response: express.Response) => {
+      console.log("## httpsUpdateDcmStatus() : E");
 
       await doUpdateDcmStats( (resMsg: string) => {
         response.send(resMsg);
       } );
 
-      console.log("## updateDcmStatus() : X");
+      console.log("## httpsUpdateDcmStatus() : X");
+    } );
+
+// Auto trigger from scheduler.
+export const cronUpdateDcmStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .pubsub
+    .schedule(DCM_CRON)
+    .timeZone(TARGET_TZ)
+    .onRun( async (context: EventContext) => {
+      console.log("## cronUpdateDcmStatus() : E");
+
+      await doUpdateDcmStats( (resMsg: string) => {
+        resMsg.replace(/\n/g, ", ");
+        console.log(`## ${resMsg}`);
+      } );
+
+      console.log("## cronUpdateDcmStatus() : X");
     } );
 
 async function doUpdateDcmStats(onDone: (resMsg: string) => void) {
@@ -234,35 +260,19 @@ async function asyncPutHttps(url: string, json: any): Promise<string> {
         url,
         options,
         (res: IncomingMessage) => {
-          console.log("## request.callback() : E");
-          console.log(`## res.statusCode = ${res.statusCode}`);
           res.setEncoding("utf8");
 
-          res.on("data", (chunk: string|Buffer) => {
-            console.log("## res.on.data()");
-            console.log(`## chunk = ${chunk.toString()}`);
-          } );
-
           res.on("aborted", () => {
-            console.log("## res.on.aborted()");
-
             resolve("ERROR : Response Aborted.");
-
           } );
 
           res.on("end", () => {
-            console.log("## res.on.end()");
-
             resolve("OK");
           } );
 
-          console.log("## request.callback() : X");
         } );
 
     req.on("error", (e: Error) => {
-      console.log("## req.on.error()");
-      console.log(e);
-
       resolve(`ERROR : Exception=${e.toString()}`);
     } );
 
