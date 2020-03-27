@@ -262,17 +262,25 @@ async function asyncPutHttps(url: string, json: any): Promise<string> {
         (res: IncomingMessage) => {
           res.setEncoding("utf8");
 
+          res.on("data", (chunk: string|Buffer) => {
+            // NOP.
+            console.log(`## https.res.on.data() : ${chunk.toString()}`);
+          } );
+
           res.on("aborted", () => {
+            console.log("## https.res.on.aborted()");
             resolve("ERROR : Response Aborted.");
           } );
 
           res.on("end", () => {
+            console.log("## https.res.on.end()");
             resolve("OK");
           } );
 
         } );
 
     req.on("error", (e: Error) => {
+      console.log("## https.req.on.error()");
       resolve(`ERROR : Exception=${e.toString()}`);
     } );
 
