@@ -16,7 +16,7 @@ const NURO_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/nuro-si
  *
  * @param onDone Callback function
  */
-export async function doUpdateNuroStats(onDone: (resMsg: string) => void) {
+export async function doUpdateNuroStats(onDone: (resJson: string) => void) {
   try {
     const browser = await genBrowser();
     const page = await genPage(browser, NURO_VALID_URL_PATTERN);
@@ -56,7 +56,7 @@ export async function doUpdateNuroStats(onDone: (resMsg: string) => void) {
     const yesterdayRes = await asyncPutHttps(yesterdayUrl, yesterdayData);
 
     // Response msg.
-    const resMsg = genResMsg(
+    const resJson: string = genResMsg(
         monthUsed,
         yesterdayUsed,
         todayUrl,
@@ -66,7 +66,7 @@ export async function doUpdateNuroStats(onDone: (resMsg: string) => void) {
         todayRes,
         yesterdayRes);
 
-    onDone(resMsg);
+    onDone(resJson);
     return;
   } catch(e) {
     onDone(`ERROR: ${e.toString()}`);

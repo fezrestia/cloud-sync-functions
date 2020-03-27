@@ -63,7 +63,7 @@ export async function parseTextFromSelector(page: Page, selector: string): Promi
 }
 
 /**
- * Response message.
+ * Response message of JSON string.
  */
 export function genResMsg(
     monthUsed: string,
@@ -74,23 +74,16 @@ export function genResMsg(
     yesterdayData: number,
     todayRes: string,
     yesterdayRes: string): string {
-
-  const resMsg = `
-<pre>
-monthUsed     = ${monthUsed}
-yesterdayUsed = ${yesterdayUsed}
-
-todayUrl      = ${todayUrl}
-yesterdayUrl  = ${yesterdayUrl}
-
-todayData     = ${JSON.stringify(todayData)}
-yesterdayData = ${JSON.stringify(yesterdayData)}
-
-todayRes      = ${todayRes}
-yesterdayRes  = ${yesterdayRes}
-</pre>
-`;
-
-  return resMsg;
+  const resJson = {
+    monthUsed: monthUsed,
+    yesterdayUsed: yesterdayUsed,
+    todayUrl: todayUrl,
+    yesterdayUrl: yesterdayUrl,
+    todayData: todayData,
+    yesterdayData: yesterdayData,
+    todayRes: todayRes,
+    yesterdayRes: yesterdayRes,
+  };
+  return JSON.stringify(resJson);
 }
 

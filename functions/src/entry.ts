@@ -38,8 +38,9 @@ export const httpsUpdateDcmStats = functions
     .onRequest( async (request: Request, response: express.Response) => {
       console.log("## httpsUpdateDcmStatus() : E");
 
-      await doUpdateDcmStats( (resMsg: string) => {
-        response.send(resMsg);
+      await doUpdateDcmStats( (resJson: string) => {
+        response.send(`<pre>${JSON.stringify(JSON.parse(resJson), null, 4)}</pre>`);
+        console.log(resJson);
       } );
 
       console.log("## httpsUpdateDcmStatus() : X");
@@ -57,9 +58,8 @@ export const cronUpdateDcmStats = functions
     .onRun( async (context: EventContext) => {
       console.log("## cronUpdateDcmStatus() : E");
 
-      await doUpdateDcmStats( (resMsg: string) => {
-        resMsg = resMsg.replace(/\r?\n/g, ", ");
-        console.log(`## ${resMsg}`);
+      await doUpdateDcmStats( (resJson: string) => {
+        console.log(resJson);
       } );
 
       console.log("## cronUpdateDcmStatus() : X");
@@ -85,8 +85,9 @@ export const httpsUpdateNuroStats = functions
     .onRequest( async (request: Request, response: express.Response) => {
       console.log("## httpsUpdateNuroStatus() : E");
 
-      await doUpdateNuroStats( (resMsg: string) => {
-        response.send(resMsg);
+      await doUpdateNuroStats( (resJson: string) => {
+        response.send(`<pre>${JSON.stringify(JSON.parse(resJson), null, 4)}</pre>`);
+        console.log(resJson);
       } );
 
       console.log("## httpsUpdateNuroStatus() : X");
@@ -104,9 +105,8 @@ export const cronUpdateNurotats = functions
     .onRun( async (context: EventContext) => {
       console.log("## cronUpdateNuroStatus() : E");
 
-      await doUpdateDcmStats( (resMsg: string) => {
-        resMsg = resMsg.replace(/\r?\n/g, ", ");
-        console.log(`## ${resMsg}`);
+      await doUpdateDcmStats( (resJson: string) => {
+        console.log(resJson);
       } );
 
       console.log("## cronUpdateNuroStatus() : X");
