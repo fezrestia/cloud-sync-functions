@@ -2,6 +2,7 @@ const functions = require("firebase-functions");
 import { Request, EventContext } from "firebase-functions";
 import * as express from "express";
 import { doUpdateDcmStats } from "./dcm_stats";
+import { doUpdateNuroStats } from "./nuro_stats";
 
 const TARGET_REGION = "asia-northeast1";
 const TARGET_TZ = "Asia/Tokyo";
@@ -25,7 +26,7 @@ export const checkStatus = functions
 //
 //
 
-const DCM_CRON = "5 */3 * * *"; // min hour day month weekday
+const DCM_CRON = "55 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
 
 /**
  * Trigger to update DCM stats from HTTP request.
@@ -57,11 +58,58 @@ export const cronUpdateDcmStats = functions
       console.log("## cronUpdateDcmStatus() : E");
 
       await doUpdateDcmStats( (resMsg: string) => {
-        resMsg.replace(/\n/g, ", ");
+        resMsg = resMsg.replace(/\r?\n/g, ", ");
         console.log(`## ${resMsg}`);
       } );
 
       console.log("## cronUpdateDcmStatus() : X");
+    } );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//// NURO SIM STATS ///////////////////////////////////////////////////////////////////////////////
+//
+//
+
+const NURO_CRON = "50 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
+
+/**
+ * Trigger to update Nuro stats from HTTP request.
+ */
+export const httpsUpdateNuroStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .https
+    .onRequest( async (request: Request, response: express.Response) => {
+      console.log("## httpsUpdateNuroStatus() : E");
+
+      await doUpdateNuroStats( (resMsg: string) => {
+        response.send(resMsg);
+      } );
+
+      console.log("## httpsUpdateNuroStatus() : X");
+    } );
+
+/**
+ * Trigger to update Nuro stats from cron.
+ */
+export const cronUpdateNurotats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .pubsub
+    .schedule(NURO_CRON)
+    .timeZone(TARGET_TZ)
+    .onRun( async (context: EventContext) => {
+      console.log("## cronUpdateNuroStatus() : E");
+
+      await doUpdateDcmStats( (resMsg: string) => {
+        resMsg = resMsg.replace(/\r?\n/g, ", ");
+        console.log(`## ${resMsg}`);
+      } );
+
+      console.log("## cronUpdateNuroStatus() : X");
     } );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

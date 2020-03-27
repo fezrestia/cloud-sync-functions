@@ -77,6 +77,7 @@ export async function asyncPutHttps(url: string, json: any): Promise<string> {
         method: "PUT",
     };
 
+    console.log("## https.request");
     const req = https.request(
         url,
         options,

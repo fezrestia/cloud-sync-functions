@@ -1,3 +1,5 @@
+import { Page } from "puppeteer";
+
 /**
  * Get now JST date.
  *
@@ -19,5 +21,76 @@ export function genJstDate(): Date {
  */
 export function genDatePath(date: Date): string {
   return `y${date.getFullYear()}/m${date.getMonth() + 1}/d${date.getDate()}`;
+}
+
+/**
+ * Generate today date path.
+ *
+ * @return Today date path.
+ */
+export function genTodayDatePath(): string {
+  const today = genJstDate();
+  const todayPath = genDatePath(today);
+  return todayPath;
+}
+
+/**
+ * Generate yesterday date path.
+ *
+ * @return Yesterday date path.
+ */
+export function genYesterdayDatePath(): string {
+  const today = genJstDate();
+  const yesterday = genJstDate();
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayPath = genDatePath(yesterday);
+  return yesterdayPath;
+}
+
+/**
+ * Parse text contents of selector.
+ *
+ * @param page Puppeteer Page instance.
+ * @param selector
+ * @return Text content
+ */
+export async function parseTextFromSelector(page: Page, selector: string): Promise<string> {
+  const element = await page.$(selector);
+  const prop = await element.getProperty("textContent");
+  const json = await prop.jsonValue();
+  const text: string = json.toString();
+  return text;
+}
+
+/**
+ * Response message.
+ */
+export function genResMsg(
+    monthUsed: string,
+    yesterdayUsed: string,
+    todayUrl: string,
+    yesterdayUrl: string,
+    todayData: number,
+    yesterdayData: number,
+    todayRes: string,
+    yesterdayRes: string): string {
+
+  const resMsg = `
+<pre>
+monthUsed     = ${monthUsed}
+yesterdayUsed = ${yesterdayUsed}
+
+todayUrl      = ${todayUrl}
+yesterdayUrl  = ${yesterdayUrl}
+
+todayData     = ${JSON.stringify(todayData)}
+yesterdayData = ${JSON.stringify(yesterdayData)}
+
+todayRes      = ${todayRes}
+yesterdayRes  = ${yesterdayRes}
+</pre>
+`;
+
+  return resMsg;
 }
 
