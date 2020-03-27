@@ -146,8 +146,8 @@ async function doUpdateDcmStats(onDone: (resMsg: string) => void) {
     const yesterdayUrl = `${DCM_FIREBASE_DB_ROOT}/${yesterdayPath}/day_used.json`;
 
     // Store data. [MB]
-    const todayData: number = Number(monthUsed) * 1000;
-    const yesterdayData: number = Number(yesterdayUsed) * 1000;
+    const todayData: number = Math.round(Number(monthUsed) * 1000);
+    const yesterdayData: number = Math.round(Number(yesterdayUsed) * 1000);
 
     // Update Firebase DB.
     console.log("## PUT today data.");
