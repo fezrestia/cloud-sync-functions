@@ -3,6 +3,7 @@ import { Request, EventContext } from "firebase-functions";
 import * as express from "express";
 import { doUpdateDcmStats } from "./dcm_stats";
 import { doUpdateNuroStats } from "./nuro_stats";
+import { doUpdateZeroSimStats } from "./zerosim_stats";
 
 const TARGET_REGION = "asia-northeast1";
 const TARGET_TZ = "Asia/Tokyo";
@@ -105,11 +106,58 @@ export const cronUpdateNurotats = functions
     .onRun( async (context: EventContext) => {
       console.log("## cronUpdateNuroStatus() : E");
 
-      await doUpdateDcmStats( (resJson: string) => {
+      await doUpdateNuroStats( (resJson: string) => {
         console.log(resJson);
       } );
 
       console.log("## cronUpdateNuroStatus() : X");
+    } );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//// ZERO SIM STATS ///////////////////////////////////////////////////////////////////////////////
+//
+//
+
+const ZEROSIM_CRON = "45 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
+
+/**
+ * Trigger to update ZeroSIM stats from HTTP request.
+ */
+export const httpsUpdateZeroSimStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .https
+    .onRequest( async (request: Request, response: express.Response) => {
+      console.log("## httpsUpdateZeroSimStatus() : E");
+
+      await doUpdateZeroSimStats( (resJson: string) => {
+        response.send(`<pre>${JSON.stringify(JSON.parse(resJson), null, 4)}</pre>`);
+        console.log(resJson);
+      } );
+
+      console.log("## httpsUpdateZeroSimStatus() : X");
+    } );
+
+/**
+ * Trigger to update ZeroSIM stats from cron.
+ */
+export const cronUpdateZeroSimStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .pubsub
+    .schedule(ZEROSIM_CRON)
+    .timeZone(TARGET_TZ)
+    .onRun( async (context: EventContext) => {
+      console.log("## cronUpdateZeroSimStatus() : E");
+
+      await doUpdateZeroSimStats( (resJson: string) => {
+        console.log(resJson);
+      } );
+
+      console.log("## cronUpdateZeroSimStatus() : X");
     } );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
