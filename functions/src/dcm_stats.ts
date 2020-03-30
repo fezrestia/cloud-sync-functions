@@ -82,8 +82,10 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     const yesterdayUrl = `${DCM_FIREBASE_DB_ROOT}/${genYesterdayDatePath()}/day_used.json`;
 
     // Store data. [MB]
-    const todayData: number = Math.round(Number(monthUsed) * 1000);
-    const yesterdayData: number = Math.round(Number(yesterdayUsed) * 1000);
+    let todayData: number = parseFloat(monthUsed) || 0.0;
+    let yesterdayData: number = parseFloat(yesterdayUsed) || 0.0;
+    todayData = Math.round(todayData * 1000);
+    yesterdayData = Math.round(yesterdayData * 1000);
 
     // Update Firebase DB.
     const todayRes = await asyncPutHttps(todayUrl, todayData);
@@ -103,7 +105,7 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     onDone(resJson);
     return;
   } catch(e) {
-    onDone(`ERROR: ${e.toString()}`);
+    onDone(`{"error": "${e.toString()}"}`);
     return;
   }
 }

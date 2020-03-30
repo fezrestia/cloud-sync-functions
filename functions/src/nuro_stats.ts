@@ -48,8 +48,8 @@ export async function doUpdateNuroStats(onDone: (resJson: string) => void) {
     const yesterdayUrl = `${NURO_FIREBASE_DB_ROOT}/${genYesterdayDatePath()}/day_used.json`;
 
     // Store data. [MB]
-    const todayData: number = parseInt(monthUsed);
-    const yesterdayData: number =  parseInt(yesterdayUsed);
+    const todayData: number = parseInt(monthUsed) || 0;
+    const yesterdayData: number = parseInt(yesterdayUsed) || 0;
 
     // Update Firebase DB.
     const todayRes = await asyncPutHttps(todayUrl, todayData);
@@ -69,7 +69,7 @@ export async function doUpdateNuroStats(onDone: (resJson: string) => void) {
     onDone(resJson);
     return;
   } catch(e) {
-    onDone(`ERROR: ${e.toString()}`);
+    onDone(`{"error": "${e.toString()}"}`);
     return;
   }
 }
