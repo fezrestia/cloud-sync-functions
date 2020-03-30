@@ -4,7 +4,8 @@ import {
     genTodayDatePath,
     genYesterdayDatePath,
     parseTextFromSelector,
-    genResMsg } from "./util";
+    genResMsg,
+    genErrorMsg } from "./util";
 import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
 
 const DCM_VALID_URL_PATTERN = "docomo";
@@ -105,7 +106,7 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     onDone(resJson);
     return;
   } catch(e) {
-    onDone(`{"error": "${e.toString()}"}`);
+    onDone(genErrorMsg(e.toString()));
     return;
   }
 }

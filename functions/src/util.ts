@@ -87,3 +87,13 @@ export function genResMsg(
   return JSON.stringify(resJson);
 }
 
+/**
+ * Error response message of JSON string.
+ */
+export function genErrorMsg(errorMsg: string): string {
+  const errorJson = {
+    error: errorMsg,
+  };
+  return JSON.stringify(errorJson);
+}
+
