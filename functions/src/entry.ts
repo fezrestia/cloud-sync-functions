@@ -4,6 +4,7 @@ import * as express from "express";
 import { doUpdateDcmStats } from "./dcm_stats";
 import { doUpdateNuroStats } from "./nuro_stats";
 import { doUpdateZeroSimStats } from "./zerosim_stats";
+import { getLatestSimStats } from "./latest_sim_stats";
 
 const TARGET_REGION = "asia-northeast1";
 const TARGET_TZ = "Asia/Tokyo";
@@ -19,7 +20,7 @@ const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"
 export const checkStatus = functions
     .runWith(runtimeConfig)
     .https
-    .onRequest( (request, response) => {
+    .onRequest( (request: Request, response: express.Response) => {
   response.send("OK");
 });
 
@@ -158,6 +159,30 @@ export const cronUpdateZeroSimStats = functions
       } );
 
       console.log("## cronUpdateZeroSimStatus() : X");
+    } );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//// GET SIM STATS ////////////////////////////////////////////////////////////////////////////////
+//
+//
+
+export const httpsGetLatestSimStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .https
+    .onRequest( async (request: Request, response: express.Response) => {
+      console.log("## httpsGetLatestSimStats() : E");
+
+      await getLatestSimStats( (json: object) => {
+        const jsonString: string = JSON.stringify(json);
+        console.log(jsonString);
+        response.send(jsonString);
+      } );
+
+      console.log("## httpsGetLatestSimStats() : X");
     } );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

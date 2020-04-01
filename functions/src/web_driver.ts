@@ -69,7 +69,7 @@ export async function genPage(browser: Browser, validUrlPattern: string): Promis
  * @return Log message. Not "OK" message is error message.
  */
 export async function asyncPutHttps(url: string, json: any): Promise<string> {
-  return new Promise<string>( (resolve: (string) => void) => {
+  return new Promise<string>( (resolve: (res: string) => void) => {
     const options = {
         headers: {
           "Content-Type": "application/json",
@@ -108,6 +108,46 @@ export async function asyncPutHttps(url: string, json: any): Promise<string> {
 
     req.write(JSON.stringify(json));
     req.end();
+  } );
+}
+
+/**
+ * Get HTTP request.
+ *
+ * @param url
+ * @return Response message string or null if failed.
+ */
+export async function asyncGetHttps(url: string): Promise<string|null> {
+  return new Promise<string|null>( (resolve: (res: string|null) => void) => {
+    console.log("## https.get");
+
+    const req = https.get(url, (res: IncomingMessage) => {
+      if (res.statusCode !== 200) {
+        // NG.
+        console.log(`ERROR : https.res.statusCode != 200`);
+        res.resume(); // Consume all data, same as data callback.
+        resolve(null);
+        return;
+      }
+
+      // OK.
+      res.setEncoding("utf8");
+      let rawData: string = "";
+
+      res.on("data", (chunk: string|Buffer) => {
+        rawData += chunk.toString();
+      } );
+
+      res.on("end", () => {
+        console.log(`## https.get.on.end() : ${rawData}`);
+        resolve(rawData);
+      } );
+    } );
+
+    req.on("error", (e: Error) => {
+      console.log(`ERROR : https.req.on.error() : ${e.toString()}`);
+      resolve(null);
+    } );
   } );
 }
 

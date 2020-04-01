@@ -12,7 +12,7 @@ const DCM_VALID_URL_PATTERN = "docomo";
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
-const DCM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/dcm-sim-usage/logs";
+export const DCM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/dcm-sim-usage/logs";
 
 /**
  * Sync from DCM web and update Firebase DB.
@@ -32,7 +32,7 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     let loginLink: ElementHandle|null = null;
     for (const link of links) {
       const prop = await link.getProperty("href");
-      const json = await prop.jsonValue();
+      const json = await prop.jsonValue() as object;
       const url = decodeURIComponent(json.toString());
 
       if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_TOP_URL)) {
@@ -54,13 +54,13 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
 
     // Input ID.
     await page.type('input[id="Di_Uid"]', functions.config().dcm.id);
-    const idButton: ElementHandle = await page.$("input.button_submit.nextaction");
+    const idButton = await page.$("input.button_submit.nextaction") as ElementHandle;
     await idButton.click();
     await page.waitForNavigation();
 
     // Input Pass.
     await page.type('input[id="Di_Pass"]', functions.config().dcm.pass);
-    const passButton: ElementHandle = await page.$("input.button_submit.nextaction");
+    const passButton = await page.$("input.button_submit.nextaction") as ElementHandle;
     await passButton.click();
     await page.waitForNavigation();
 

@@ -10,7 +10,7 @@ import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
 
 const NURO_VALID_URL_PATTERN = "nuro";
 const NURO_LOGIN_URL = "https://mobile.nuro.jp/mobile_contract/u/login/";
-const NURO_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/nuro-sim-usage/logs";
+export const NURO_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/nuro-sim-usage/logs";
 
 /**
  * Sync from Nuro web and update Firebase DB.
@@ -28,7 +28,7 @@ export async function doUpdateNuroStats(onDone: (resJson: string) => void) {
     // Login.
     await page.type("input#simNumber", functions.config().nuro.id);
     await page.type("input#simPassword", functions.config().nuro.pass);
-    const loginButton: ElementHandle = await page.$("input#simSubmit");
+    const loginButton = await page.$("input#simSubmit") as ElementHandle;
     await loginButton.click();
     await page.waitForNavigation();
 

@@ -10,7 +10,7 @@ import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
 
 const ZEROSIM_VALID_URL_PATTERN = "so-net";
 const ZEROSIM_LOGIN_URL = "https://www.so-net.ne.jp/retail/u/";
-const ZEROSIM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/zero-sim-usage/logs/";
+export const ZEROSIM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/zero-sim-usage/logs/";
 
 /**
  * Sync from ZeroSIM web and update Firebase DB.
@@ -28,7 +28,7 @@ export async function doUpdateZeroSimStats(onDone: (resJson: string) => void) {
     // Login.
     await page.type("input#simNumber", functions.config().zerosim.id);
     await page.type("input#simPassword", functions.config().zerosim.pass);
-    const loginButton: ElementHandle = await page.$("input#simSubmit");
+    const loginButton = await page.$("input#simSubmit") as ElementHandle;
     await loginButton.click();
     await page.waitForNavigation();
 
@@ -37,7 +37,7 @@ export async function doUpdateZeroSimStats(onDone: (resJson: string) => void) {
     await page.waitForSelector(usageMenuButtonSelector);
 
     // Usage data page.
-    const usageMenuButton: ElementHandle = await page.$(usageMenuButtonSelector);
+    const usageMenuButton = await page.$(usageMenuButtonSelector) as ElementHandle;
     await usageMenuButton.click();
     await page.waitForNavigation();
 
