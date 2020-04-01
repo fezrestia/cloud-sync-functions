@@ -179,6 +179,9 @@ export const httpsGetLatestSimStats = functions
       await getLatestSimStats( (json: object) => {
         const jsonString: string = JSON.stringify(json);
         console.log(jsonString);
+
+        response.append("Access-Control-Allow-Origin", "*");
+
         response.send(jsonString);
       } );
 
