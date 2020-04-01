@@ -1,10 +1,10 @@
 const functions = require("firebase-functions");
 import { Request, EventContext } from "firebase-functions";
 import * as express from "express";
-import { doUpdateDcmStats } from "./dcm_stats";
-import { doUpdateNuroStats } from "./nuro_stats";
-import { doUpdateZeroSimStats } from "./zerosim_stats";
-import { getLatestSimStats } from "./latest_sim_stats";
+import { doUpdateDcmStats } from "./sim-stats/dcm_stats";
+import { doUpdateNuroStats } from "./sim-stats/nuro_stats";
+import { doUpdateZeroSimStats } from "./sim-stats/zerosim_stats";
+import { getLatestSimStats } from "./sim-stats/latest_sim_stats";
 
 const TARGET_REGION = "asia-northeast1";
 const TARGET_TZ = "Asia/Tokyo";

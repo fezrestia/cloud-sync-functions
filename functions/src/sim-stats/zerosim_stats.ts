@@ -5,8 +5,8 @@ import {
     genYesterdayDatePath,
     parseTextFromSelector,
     genResMsg,
-    genErrorMsg } from "./util";
-import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
+    genErrorMsg } from "../util";
+import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
 
 const ZEROSIM_VALID_URL_PATTERN = "so-net";
 const ZEROSIM_LOGIN_URL = "https://www.so-net.ne.jp/retail/u/";

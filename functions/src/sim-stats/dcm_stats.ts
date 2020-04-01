@@ -5,8 +5,8 @@ import {
     genYesterdayDatePath,
     parseTextFromSelector,
     genResMsg,
-    genErrorMsg } from "./util";
-import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
+    genErrorMsg } from "../util";
+import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
 
 const DCM_VALID_URL_PATTERN = "docomo";
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";

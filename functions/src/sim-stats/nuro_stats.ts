@@ -5,8 +5,8 @@ import {
     genYesterdayDatePath,
     parseTextFromSelector,
     genResMsg,
-    genErrorMsg } from "./util";
-import { genBrowser, genPage, asyncPutHttps } from "./web_driver";
+    genErrorMsg } from "../util";
+import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
 
 const NURO_VALID_URL_PATTERN = "nuro";
 const NURO_LOGIN_URL = "https://mobile.nuro.jp/mobile_contract/u/login/";

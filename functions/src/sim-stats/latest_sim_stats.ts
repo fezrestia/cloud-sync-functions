@@ -1,5 +1,5 @@
-import { genTodayDatePath, genYesterdayDatePath } from "./util";
-import { asyncGetHttps } from "./web_driver";
+import { genTodayDatePath, genYesterdayDatePath } from "../util";
+import { asyncGetHttps } from "../web_driver";
 import { DCM_FIREBASE_DB_ROOT } from "./dcm_stats";
 import { NURO_FIREBASE_DB_ROOT } from "./nuro_stats";
 import { ZEROSIM_FIREBASE_DB_ROOT } from "./zerosim_stats";
