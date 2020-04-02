@@ -53,15 +53,20 @@ export async function getLatestSimStats(onDone: (json: object) => void) {
 // positive number = used amount [MB]
 // negative number = error
 async function getMonthUsed(rootUrl: string, datePath: string): Promise<number> {
-  const todayUrl = `${rootUrl}/${datePath}/month_used_current.json`
+  const url = `${rootUrl}/${datePath}/month_used_current.json`
 
-  const todayMonthUsedRawData: string|null = await asyncGetHttps(todayUrl);
+  const rawData: string|null = await asyncGetHttps(url);
 
-  if (todayMonthUsedRawData === null) {
-    console.log(`ERROR: Failed to get today month used on ${rootUrl}`);
+  if (rawData === null) {
+    console.log(`ERROR: Failed to get month used on ${url}`);
     return -1;
   }
 
-  return parseInt(todayMonthUsedRawData);
+  if (rawData === "null") {
+    // Data is not available yet. Maybe just after date change.
+    return -1;
+  }
+
+  return parseInt(rawData);
 }
 
