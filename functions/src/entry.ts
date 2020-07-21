@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+import functions = require("firebase-functions");
 import { Request, EventContext } from "firebase-functions";
 import * as express from "express";
 import { doUpdateDcmStats } from "./sim-stats/dcm_stats";
@@ -23,6 +23,80 @@ export const checkStatus = functions
     .onRequest( (request: Request, response: express.Response) => {
   response.send("OK");
 });
+
+//// CALLABLE FUNCTION ////////////////////////////////////////////////////////////////////////////
+//
+//
+
+const SRV_DCM = "dcm";
+const SRV_NURO = "nuro";
+const SRV_ZEROSIM = "zerosim";
+
+/**
+ * Trigger update SIM stats.
+ */
+export const callUpdateSimStats = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .https
+    .onCall( async (data: any, context: functions.https.CallableContext): Promise<any> => {
+      if (!isValidUser(context.auth)) {
+        return genResponse(true, "NG, invalid user.");
+      }
+
+      const service = data.service;
+      let res: string = "";
+      switch (service) {
+        case SRV_DCM:
+          await doUpdateDcmStats( (resJson: string) => {
+            res = resJson;
+          } );
+          break;
+
+        case SRV_NURO:
+          await doUpdateNuroStats( (resJson: string) => {
+            res = resJson;
+          } );
+          break;
+
+        case SRV_ZEROSIM:
+          await doUpdateZeroSimStats( (resJson: string) => {
+            res = resJson;
+          } );
+          break;
+
+        default:
+          console.log(`## ERROR: service unknown. ${service}`);
+          return genResponse(true, `NG, service=${service} is unknown.`);
+      }
+
+      return genResponse(false, res);
+    } );
+
+function genResponse(isError: boolean, message: string): any {
+  return {
+    is_error: isError,
+    message: message,
+  };
+}
+
+function isValidUser(auth: any): boolean {
+  if (auth === undefined || auth === null) {
+    return false;
+  }
+
+  const uid = auth.uid;
+  if (uid === undefined || uid === null) {
+    return false;
+  }
+
+  const validUid = functions.config().root.uid;
+  return validUid === uid;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 //// DCM SIM STATS ////////////////////////////////////////////////////////////////////////////////
 //
