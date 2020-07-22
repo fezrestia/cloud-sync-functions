@@ -72,8 +72,8 @@ export function genResMsg(
     yesterdayUrl: string,
     todayData: number,
     yesterdayData: number,
-    todayRes: string,
-    yesterdayRes: string): string {
+    todayOkNg: string,
+    yesterdayOkNg: string): string {
   const resJson = {
     monthUsed: monthUsed,
     yesterdayUsed: yesterdayUsed,
@@ -81,8 +81,8 @@ export function genResMsg(
     yesterdayUrl: yesterdayUrl,
     todayData: todayData,
     yesterdayData: yesterdayData,
-    todayRes: todayRes,
-    yesterdayRes: yesterdayRes,
+    todayOkNg: todayOkNg,
+    yesterdayOkNg: yesterdayOkNg,
   };
   return JSON.stringify(resJson);
 }

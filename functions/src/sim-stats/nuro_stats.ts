@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+import functions = require("firebase-functions");
 import { Browser, Page, ElementHandle } from "puppeteer";
 import {
     genTodayDatePath,
@@ -6,11 +6,12 @@ import {
     parseTextFromSelector,
     genResMsg,
     genErrorMsg } from "../util";
-import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
+import { genBrowser, genPage, asyncUpdateFirebaseDatabase } from "../web_driver";
 
 const NURO_VALID_URL_PATTERN = "nuro";
 const NURO_LOGIN_URL = "https://mobile.nuro.jp/mobile_contract/u/login/";
-export const NURO_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/nuro-sim-usage/logs";
+const NURO_FIREBASE_DB_PATH = "nuro-sim-usage/logs";
+export const NURO_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${NURO_FIREBASE_DB_PATH}`;
 
 /**
  * Sync from Nuro web and update Firebase DB.
@@ -44,28 +45,34 @@ export async function doUpdateNuroStats(onDone: (resJson: string) => void) {
     // Get yesterday used data.
     const yesterdayUsed: string = await parseTextFromSelector(page, yesterdayUsedSelector);
 
-    // Firebase DB target URL.
-    const todayUrl = `${NURO_FIREBASE_DB_ROOT}/${genTodayDatePath()}/month_used_current.json`;
-    const yesterdayUrl = `${NURO_FIREBASE_DB_ROOT}/${genYesterdayDatePath()}/day_used.json`;
+    await browser.close();
+
+    // Firebase DB path.
+    const todayPath = `${NURO_FIREBASE_DB_PATH}/${genTodayDatePath()}`;
+    const yesterdayPath = `${NURO_FIREBASE_DB_PATH}/${genYesterdayDatePath()}`;
 
     // Store data. [MB]
-    const todayData: number = parseInt(monthUsed) || 0;
-    const yesterdayData: number = parseInt(yesterdayUsed) || 0;
+    const todayData = {
+      month_used_current: parseInt(monthUsed) || 0,
+    };
+    const yesterdayData = {
+      day_used: parseInt(yesterdayUsed) || 0,
+    };
 
-    // Update Firebase DB.
-    const todayRes = await asyncPutHttps(todayUrl, todayData);
-    const yesterdayRes = await asyncPutHttps(yesterdayUrl, yesterdayData);
+    // Update Firebase Database.
+    const isTodayOk = await asyncUpdateFirebaseDatabase(todayPath, todayData);
+    const isYesterdayOk = await asyncUpdateFirebaseDatabase(yesterdayPath, yesterdayData);
 
     // Response msg.
     const resJson: string = genResMsg(
         monthUsed,
         yesterdayUsed,
-        todayUrl,
-        yesterdayUrl,
-        todayData,
-        yesterdayData,
-        todayRes,
-        yesterdayRes);
+        todayPath,
+        yesterdayPath,
+        todayData.month_used_current,
+        yesterdayData.day_used,
+        isTodayOk ? "OK" : "NG",
+        isYesterdayOk ? "OK" : "NG");
 
     onDone(resJson);
     return;

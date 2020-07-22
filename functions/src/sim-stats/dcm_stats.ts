@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+import functions = require("firebase-functions");
 import { Browser, Page, ElementHandle } from "puppeteer";
 import {
     genTodayDatePath,
@@ -6,13 +6,14 @@ import {
     parseTextFromSelector,
     genResMsg,
     genErrorMsg } from "../util";
-import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
+import { genBrowser, genPage, asyncUpdateFirebaseDatabase } from "../web_driver";
 
 const DCM_VALID_URL_PATTERN = "docomo";
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
-export const DCM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/dcm-sim-usage/logs";
+const DCM_FIREBASE_DB_PATH = "dcm-sim-usage/logs";
+export const DCM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${DCM_FIREBASE_DB_PATH}`;
 
 /**
  * Sync from DCM web and update Firebase DB.
@@ -78,30 +79,32 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
 
     await browser.close();
 
-    // Firebase DB target path.
-    const todayUrl = `${DCM_FIREBASE_DB_ROOT}/${genTodayDatePath()}/month_used_current.json`;
-    const yesterdayUrl = `${DCM_FIREBASE_DB_ROOT}/${genYesterdayDatePath()}/day_used.json`;
+    // Firebase DB path.
+    const todayPath = `${DCM_FIREBASE_DB_PATH}/${genTodayDatePath()}`;
+    const yesterdayPath = `${DCM_FIREBASE_DB_PATH}/${genYesterdayDatePath()}`;
 
     // Store data. [MB]
-    let todayData: number = parseFloat(monthUsed) || 0.0;
-    let yesterdayData: number = parseFloat(yesterdayUsed) || 0.0;
-    todayData = Math.round(todayData * 1000);
-    yesterdayData = Math.round(yesterdayData * 1000);
+    const todayData = {
+      month_used_current: Math.round( (parseFloat(monthUsed) || 0.0) * 1000 ),
+    };
+    const yesterdayData = {
+      day_used: Math.round( (parseFloat(yesterdayUsed) || 0.0) * 1000 ),
+    };
 
-    // Update Firebase DB.
-    const todayRes = await asyncPutHttps(todayUrl, todayData);
-    const yesterdayRes = await asyncPutHttps(yesterdayUrl, yesterdayData);
+    // Update Firebase Database.
+    const isTodayOk = await asyncUpdateFirebaseDatabase(todayPath, todayData);
+    const isYesterdayOk = await asyncUpdateFirebaseDatabase(yesterdayPath, yesterdayData);
 
     // Response msg.
     const resJson = genResMsg(
         monthUsed,
         yesterdayUsed,
-        todayUrl,
-        yesterdayUrl,
-        todayData,
-        yesterdayData,
-        todayRes,
-        yesterdayRes);
+        todayPath,
+        yesterdayPath,
+        todayData.month_used_current,
+        yesterdayData.day_used,
+        isTodayOk ? "OK" : "NG",
+        isYesterdayOk ? "OK" : "NG");
 
     onDone(resJson);
     return;

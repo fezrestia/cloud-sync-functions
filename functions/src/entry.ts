@@ -1,4 +1,5 @@
 import functions = require("firebase-functions");
+import admin = require("firebase-admin");
 import { Request, EventContext } from "firebase-functions";
 import * as express from "express";
 import { doUpdateDcmStats } from "./sim-stats/dcm_stats";
@@ -21,8 +22,16 @@ export const checkStatus = functions
     .runWith(runtimeConfig)
     .https
     .onRequest( (request: Request, response: express.Response) => {
-  response.send("OK");
-});
+      response.send("OK");
+    } );
+
+export const callCheckStatus = functions
+    .runWith(runtimeConfig)
+    .region(TARGET_REGION)
+    .https
+    .onCall( async (data: any, context: functions.https.CallableContext): Promise<any> => {
+      return "OK";
+    } );
 
 //// CALLABLE FUNCTION ////////////////////////////////////////////////////////////////////////////
 //

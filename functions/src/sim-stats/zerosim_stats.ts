@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+import functions = require("firebase-functions");
 import { Browser, Page, ElementHandle } from "puppeteer";
 import {
     genTodayDatePath,
@@ -6,11 +6,12 @@ import {
     parseTextFromSelector,
     genResMsg,
     genErrorMsg } from "../util";
-import { genBrowser, genPage, asyncPutHttps } from "../web_driver";
+import { genBrowser, genPage, asyncUpdateFirebaseDatabase } from "../web_driver";
 
 const ZEROSIM_VALID_URL_PATTERN = "so-net";
 const ZEROSIM_LOGIN_URL = "https://www.so-net.ne.jp/retail/u/";
-export const ZEROSIM_FIREBASE_DB_ROOT = "https://cloud-sync-service.firebaseio.com/zero-sim-usage/logs/";
+const ZEROSIM_FIREBASE_DB_PATH = "zero-sim-usage/logs";
+export const ZEROSIM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${ZEROSIM_FIREBASE_DB_PATH}`;
 
 /**
  * Sync from ZeroSIM web and update Firebase DB.
@@ -53,32 +54,38 @@ export async function doUpdateZeroSimStats(onDone: (resJson: string) => void) {
     // Get yesterday used data.
     const yesterdayUsedRaw: string = await parseTextFromSelector(page, yesterdayUsedSelector);
 
+    await browser.close();
+
     // Remove white-space and "MB".
     const monthUsed: string = monthUsedRaw.replace(/(\s|MB)/g, "");
     const yesterdayUsed: string = yesterdayUsedRaw.replace(/(\s|MB)/g, "");
 
-    // Firebase DB target URL.
-    const todayUrl = `${ZEROSIM_FIREBASE_DB_ROOT}/${genTodayDatePath()}/month_used_current.json`;
-    const yesterdayUrl = `${ZEROSIM_FIREBASE_DB_ROOT}/${genYesterdayDatePath()}/day_used.json`;
+    // Firebase DB path.
+    const todayPath = `${ZEROSIM_FIREBASE_DB_PATH}/${genTodayDatePath()}`;
+    const yesterdayPath = `${ZEROSIM_FIREBASE_DB_PATH}/${genYesterdayDatePath()}`;
 
     // Store data. [MB]
-    const todayData: number = parseInt(monthUsed) || 0;
-    const yesterdayData: number = parseInt(yesterdayUsed) || 0;
+    const todayData = {
+      month_used_current: parseInt(monthUsed) || 0,
+    };
+    const yesterdayData = {
+      day_used: parseInt(yesterdayUsed) || 0,
+    };
 
-    // Update Firebase DB.
-    const todayRes = await asyncPutHttps(todayUrl, todayData);
-    const yesterdayRes = await asyncPutHttps(yesterdayUrl, yesterdayData);
+    // Update Firebase Database.
+    const isTodayOk = await asyncUpdateFirebaseDatabase(todayPath, todayData);
+    const isYesterdayOk = await asyncUpdateFirebaseDatabase(yesterdayPath, yesterdayData);
 
     // Response msg.
     const resJson: string = genResMsg(
         monthUsed,
         yesterdayUsed,
-        todayUrl,
-        yesterdayUrl,
-        todayData,
-        yesterdayData,
-        todayRes,
-        yesterdayRes);
+        todayPath,
+        yesterdayPath,
+        todayData.month_used_current,
+        yesterdayData.day_used,
+        isTodayOk ? "OK" : "NG",
+        isYesterdayOk ? "OK" : "NG");
 
     onDone(resJson);
     return;

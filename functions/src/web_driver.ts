@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer");
 import { Browser, Page } from "puppeteer";
 const https = require("https");
 import { IncomingMessage } from "http";
+import admin = require("firebase-admin");
 
 /**
  * Generate puppeteer web driver browser instance.
@@ -149,5 +150,44 @@ export async function asyncGetHttps(url: string): Promise<string|null> {
       resolve(null);
     } );
   } );
+}
+
+/**
+ * Update Firebase DB.
+ *
+ * @param path Firebase DB ref path.
+ * @param data JSON like data object.
+ * @return OK/NG.
+ */
+export async function asyncUpdateFirebaseDatabase(path: string, data: object): Promise<boolean> {
+  const firebase = admin.initializeApp();
+
+  let isUpdateOk = false;
+  let isDoneOk = false;
+
+  await firebase.database().ref(path).update(data, (error: Error|null) => {
+    if (error !== null) {
+      // NG.
+      console.log(`## Write DB NG. message=${error.message}`);
+      isUpdateOk = false;
+    } else {
+      // OK.
+      console.log("## Write DB OK.");
+      isUpdateOk = true;
+    }
+  } );
+  await firebase.delete()
+      .then( () => {
+        // OK.
+        console.log("## FirebaseAdminApp.delete() : OK");
+        isDoneOk = true;
+      } )
+      .catch( (error: Error) => {
+        // NG.
+        console.log(`## FirebaseAdminApp.delete() : NG. err=${error.message}`);
+        isDoneOk = false;
+      } );
+
+  return isUpdateOk && isDoneOk;
 }
 
