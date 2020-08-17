@@ -7,10 +7,10 @@ import { doUpdateNuroStats } from "./sim-stats/nuro_stats";
 import { doUpdateZeroSimStats } from "./sim-stats/zerosim_stats";
 import { getLatestSimStats } from "./sim-stats/latest_sim_stats";
 
-const TARGET_REGION = "asia-northeast1";
-const TARGET_TZ = "Asia/Tokyo";
+export const TARGET_REGION = "asia-northeast1";
+export const TARGET_TZ = "Asia/Tokyo";
 
-const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"1GB"|"2GB" } = {
+export const RUNTIME_CONFIG: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"1GB"|"2GB" } = {
   timeoutSeconds: 300,
   memory: "512MB"
 };
@@ -19,19 +19,58 @@ const runtimeConfig: { timeoutSeconds: number, memory: "128MB"|"256MB"|"512MB"|"
  * Debug API.
  */
 export const checkStatus = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .https
     .onRequest( (request: Request, response: express.Response) => {
       response.send("OK");
     } );
 
 export const callCheckStatus = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
     .onCall( async (data: any, context: functions.https.CallableContext): Promise<any> => {
       return "OK";
     } );
+
+//// UTIL FUNCTION ////////////////////////////////////////////////////////////////////////////////
+//
+//
+
+export interface CallResponse {
+  is_error: boolean,
+  message: string,
+}
+
+export const DEFAULT_CALL_RESPONSE = {
+  is_error: true,
+  message: "Not Initialized Yet.",
+}
+
+export function genResponse(isError: boolean, message: string): CallResponse {
+  return {
+    is_error: isError,
+    message: message,
+  };
+}
+
+export function isValidUser(auth: any): boolean {
+  if (auth === undefined || auth === null) {
+    return false;
+  }
+
+  const uid = auth.uid;
+  if (uid === undefined || uid === null) {
+    return false;
+  }
+
+  const validUid = functions.config().root.uid;
+  return validUid === uid;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 //// CALLABLE FUNCTION ////////////////////////////////////////////////////////////////////////////
 //
@@ -45,10 +84,10 @@ const SRV_ZEROSIM = "zerosim";
  * Trigger update SIM stats.
  */
 export const callUpdateSimStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
-    .onCall( async (data: any, context: functions.https.CallableContext): Promise<any> => {
+    .onCall( async (data: any, context: functions.https.CallableContext): Promise<CallResponse> => {
       if (!isValidUser(context.auth)) {
         return genResponse(true, "NG, invalid user.");
       }
@@ -82,27 +121,6 @@ export const callUpdateSimStats = functions
       return genResponse(false, res);
     } );
 
-function genResponse(isError: boolean, message: string): any {
-  return {
-    is_error: isError,
-    message: message,
-  };
-}
-
-function isValidUser(auth: any): boolean {
-  if (auth === undefined || auth === null) {
-    return false;
-  }
-
-  const uid = auth.uid;
-  if (uid === undefined || uid === null) {
-    return false;
-  }
-
-  const validUid = functions.config().root.uid;
-  return validUid === uid;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -117,7 +135,7 @@ const DCM_CRON = "55 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
  * Trigger to update DCM stats from HTTP request.
  */
 export const httpsUpdateDcmStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
     .onRequest( async (request: Request, response: express.Response) => {
@@ -135,7 +153,7 @@ export const httpsUpdateDcmStats = functions
  * Trigger to update DCM stats from cron.
  */
 export const cronUpdateDcmStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .pubsub
     .schedule(DCM_CRON)
@@ -164,7 +182,7 @@ const NURO_CRON = "50 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
  * Trigger to update Nuro stats from HTTP request.
  */
 export const httpsUpdateNuroStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
     .onRequest( async (request: Request, response: express.Response) => {
@@ -182,7 +200,7 @@ export const httpsUpdateNuroStats = functions
  * Trigger to update Nuro stats from cron.
  */
 export const cronUpdateNurotats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .pubsub
     .schedule(NURO_CRON)
@@ -211,7 +229,7 @@ const ZEROSIM_CRON = "45 2,5,8,11,14,17,20,23 * * *"; // min hour day month week
  * Trigger to update ZeroSIM stats from HTTP request.
  */
 export const httpsUpdateZeroSimStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
     .onRequest( async (request: Request, response: express.Response) => {
@@ -229,7 +247,7 @@ export const httpsUpdateZeroSimStats = functions
  * Trigger to update ZeroSIM stats from cron.
  */
 export const cronUpdateZeroSimStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .pubsub
     .schedule(ZEROSIM_CRON)
@@ -253,7 +271,7 @@ export const cronUpdateZeroSimStats = functions
 //
 
 export const httpsGetLatestSimStats = functions
-    .runWith(runtimeConfig)
+    .runWith(RUNTIME_CONFIG)
     .region(TARGET_REGION)
     .https
     .onRequest( async (request: Request, response: express.Response) => {
@@ -270,6 +288,18 @@ export const httpsGetLatestSimStats = functions
 
       console.log("## httpsGetLatestSimStats() : X");
     } );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//// AUTH /////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+
+import { callCreateNewUser } from "./auth/auth";
+
+exports.callCreateNewUser = callCreateNewUser;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
