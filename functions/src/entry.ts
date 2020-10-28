@@ -223,7 +223,7 @@ export const cronUpdateNurotats = functions
 //
 //
 
-const ZEROSIM_CRON = "45 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
+//const ZEROSIM_CRON = "45 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
 
 /**
  * Trigger to update ZeroSIM stats from HTTP request.
@@ -243,24 +243,24 @@ export const httpsUpdateZeroSimStats = functions
       console.log("## httpsUpdateZeroSimStatus() : X");
     } );
 
-/**
- * Trigger to update ZeroSIM stats from cron.
- */
-export const cronUpdateZeroSimStats = functions
-    .runWith(RUNTIME_CONFIG)
-    .region(TARGET_REGION)
-    .pubsub
-    .schedule(ZEROSIM_CRON)
-    .timeZone(TARGET_TZ)
-    .onRun( async (context: EventContext) => {
-      console.log("## cronUpdateZeroSimStatus() : E");
-
-      await doUpdateZeroSimStats( (resJson: string) => {
-        console.log(resJson);
-      } );
-
-      console.log("## cronUpdateZeroSimStatus() : X");
-    } );
+///**
+// * Trigger to update ZeroSIM stats from cron.
+// */
+//export const cronUpdateZeroSimStats = functions
+//    .runWith(RUNTIME_CONFIG)
+//    .region(TARGET_REGION)
+//    .pubsub
+//    .schedule(ZEROSIM_CRON)
+//    .timeZone(TARGET_TZ)
+//    .onRun( async (context: EventContext) => {
+//      console.log("## cronUpdateZeroSimStatus() : E");
+//
+//      await doUpdateZeroSimStats( (resJson: string) => {
+//        console.log(resJson);
+//      } );
+//
+//      console.log("## cronUpdateZeroSimStatus() : X");
+//    } );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
