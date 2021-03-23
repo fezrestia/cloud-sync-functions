@@ -12,6 +12,10 @@ const DCM_VALID_URL_PATTERN = "docomo";
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
+const DCM_LOGIN_URL_INCLUDE = `${DCM_HOST_URL}/mydocomo`;
+const DCM_3DAY_DETAIL_URL = "https://www.mydocomo.com/dcm/dfw/bis/guide/charges/gkyap001.srv";
+const DCM_MONTH_DETAIL_URL = "https://www.mydocomo.com/dcm/dfw/bis/guide/charges/gkyap001.srv?Xitraffic=1";
+
 const DCM_FIREBASE_DB_PATH = "dcm-sim-usage/logs";
 export const DCM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${DCM_FIREBASE_DB_PATH}`;
 
@@ -31,21 +35,25 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     // Search login URL.
     const links: ElementHandle[] = await page.$$("a");
     let loginLink: ElementHandle|null = null;
+    let loginUrl: string|null = null;
     for (const link of links) {
+      if (link === null) continue;
+
       const prop = await link.getProperty("href");
       const json = await prop.jsonValue() as object;
       const url = decodeURIComponent(json.toString());
 
-      if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_TOP_URL)) {
-        if (loginLink !== null) {
-          onDone("ERROR: Over 2 Login Links Detected.");
+      if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_LOGIN_URL_INCLUDE)) {
+        if (loginLink !== null && loginUrl !== url) {
+          onDone(`{"error": "Over 2 Login Links Detected."}`);
           return;
         }
         loginLink = link;
+        loginUrl = url;
       }
     }
     if (loginLink === null) {
-      onDone("ERROR: No Login Link Detected.");
+      onDone(`{"error": "No Login Link Detected."}`);
       return;
     }
 
@@ -66,16 +74,31 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     await page.waitForNavigation();
 
     // Wait for contents rendering.
-    await page.waitForSelector("section#mydcm_data_data");
     await page.waitForSelector("section#mydcm_data_3day");
+    await page.waitForSelector("section#mydcm_data_month");
 
-    // Parse month data.
-    const monthUsedSelector = "section#mydcm_data_data div.in-data-use span.card-t-number";
-    const monthUsed: string = await parseTextFromSelector(page, monthUsedSelector);
+    // Go to 3-day detail page.
+    await page.goto(DCM_3DAY_DETAIL_URL, { waitUntil: "networkidle0" });
+    await page.waitForSelector("div#content");
 
-    // Parse day data.
-    const yesterdayUsedSelector = "section#mydcm_data_3day div#mydcm_data_3day-03 dl.mydcm_data_3day-03-02 span.card-t-ssnumber";
-    const yesterdayUsed: string = await parseTextFromSelector(page, yesterdayUsedSelector);
+    // Parse yesterday used.
+    const yesterdayUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(3) td:nth-child(2) tr td:nth-child(1) span";
+    let yesterdayUsed: string = await parseTextFromSelector(page, yesterdayUsedSelector);
+    yesterdayUsed = yesterdayUsed.replace(/,/g, "");
+    yesterdayUsed = yesterdayUsed.replace("KB", "");
+    const yesterdayUsedMb: number = Math.round(parseInt(yesterdayUsed) / 1000); // Convert KB to MB.
+
+    // Go to month detail page.
+    await page.goto(DCM_MONTH_DETAIL_URL, { waitUntil: "networkidle0" });
+    await page.waitForSelector("div#content");
+
+    // Parse month used.
+    const monthUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(2) td:nth-child(2) tr td:nth-child(2) p";
+    let monthUsed: string = await parseTextFromSelector(page, monthUsedSelector);
+    monthUsed = monthUsed.replace(/,/g, "");
+    monthUsed = monthUsed.replace("(", "");
+    monthUsed = monthUsed.replace(")", "");
+    const monthUsedMb: number = Math.round(parseInt(monthUsed) / 1000); // Convert KB to MB.
 
     await browser.close();
 
@@ -85,10 +108,10 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
 
     // Store data. [MB]
     const todayData = {
-      month_used_current: Math.round( (parseFloat(monthUsed) || 0.0) * 1000 ),
+      month_used_current: monthUsedMb,
     };
     const yesterdayData = {
-      day_used: Math.round( (parseFloat(yesterdayUsed) || 0.0) * 1000 ),
+      day_used: yesterdayUsedMb,
     };
 
     // Update Firebase Database.
