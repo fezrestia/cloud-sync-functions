@@ -176,7 +176,7 @@ export const cronUpdateDcmStats = functions
 //
 //
 
-const NURO_CRON = "50 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
+//const NURO_CRON = "50 2,5,8,11,14,17,20,23 * * *"; // min hour day month weekday
 
 /**
  * Trigger to update Nuro stats from HTTP request.
@@ -196,24 +196,24 @@ export const httpsUpdateNuroStats = functions
       console.log("## httpsUpdateNuroStatus() : X");
     } );
 
-/**
- * Trigger to update Nuro stats from cron.
- */
-export const cronUpdateNurotats = functions
-    .runWith(RUNTIME_CONFIG)
-    .region(TARGET_REGION)
-    .pubsub
-    .schedule(NURO_CRON)
-    .timeZone(TARGET_TZ)
-    .onRun( async (context: EventContext) => {
-      console.log("## cronUpdateNuroStatus() : E");
-
-      await doUpdateNuroStats( (resJson: string) => {
-        console.log(resJson);
-      } );
-
-      console.log("## cronUpdateNuroStatus() : X");
-    } );
+///**
+// * Trigger to update Nuro stats from cron.
+// */
+//export const cronUpdateNurotats = functions
+//    .runWith(RUNTIME_CONFIG)
+//    .region(TARGET_REGION)
+//    .pubsub
+//    .schedule(NURO_CRON)
+//    .timeZone(TARGET_TZ)
+//    .onRun( async (context: EventContext) => {
+//      console.log("## cronUpdateNuroStatus() : E");
+//
+//      await doUpdateNuroStats( (resJson: string) => {
+//        console.log(resJson);
+//      } );
+//
+//      console.log("## cronUpdateNuroStatus() : X");
+//    } );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
