@@ -1,5 +1,5 @@
 import functions = require("firebase-functions");
-import { Browser, Page, ElementHandle } from "puppeteer";
+import { Browser, Page, ElementHandle, JSHandle } from "puppeteer";
 import {
     genTodayDatePath,
     genYesterdayDatePath,
@@ -39,8 +39,8 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     for (const link of links) {
       if (link === null) continue;
 
-      const prop = await link.getProperty("href");
-      const json = await prop.jsonValue() as object;
+      const prop = await link.getProperty("href") as JSHandle;
+      const json: Object = await prop.jsonValue();
       const url = decodeURIComponent(json.toString());
 
       if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_LOGIN_URL_INCLUDE)) {

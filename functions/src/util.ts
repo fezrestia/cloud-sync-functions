@@ -1,4 +1,4 @@
-import { Page, ElementHandle } from "puppeteer";
+import { Page, ElementHandle, JSHandle } from "puppeteer";
 
 /**
  * Get now JST date.
@@ -56,8 +56,8 @@ export function genYesterdayDatePath(): string {
  */
 export async function parseTextFromSelector(page: Page, selector: string): Promise<string> {
   const element = await page.$(selector) as ElementHandle;
-  const prop = await element.getProperty("textContent");
-  const json = await prop.jsonValue() as object;
+  const prop = await element.getProperty("textContent") as JSHandle;
+  const json: Object = await prop.jsonValue();
   const text: string = json.toString();
   return text;
 }
