@@ -35,7 +35,7 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
 
     // Search login URL.
     const loginSelector = "div#mydcm_footer_login_btn a.mydcm_login_normal";
-    const login = await page.$(loginSelector) as ElementHandle|null;
+    const login: ElementHandle|null = await page.$(loginSelector);
     if (login === null) {
       onDone(`{"error": "No Login Link Detected."}`);
       return;
