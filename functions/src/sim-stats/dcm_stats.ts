@@ -31,55 +31,50 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
 
     // Top page.
     await page.goto(DCM_TOP_URL, { waitUntil: "networkidle0" });
+    console.log("DCM: Open top page : DONE");
 
     // Search login URL.
-    const links: ElementHandle[] = await page.$$("a");
-    let loginLink: ElementHandle|null = null;
-    let loginUrl: string|null = null;
-    for (const link of links) {
-      if (link === null) continue;
-
-      const prop = await link.getProperty("href") as JSHandle;
-      const json: Object = await prop.jsonValue();
-      const url = decodeURIComponent(json.toString());
-
-      if (url.startsWith(DCM_LOGIN_URL) && url.includes(DCM_LOGIN_URL_INCLUDE)) {
-        if (loginLink !== null && loginUrl !== url) {
-          onDone(`{"error": "Over 2 Login Links Detected."}`);
-          return;
-        }
-        loginLink = link;
-        loginUrl = url;
-      }
-    }
-    if (loginLink === null) {
+    const loginSelector = "div#mydcm_footer_login_btn a.mydcm_login_normal";
+    const login = await page.$(loginSelector) as ElementHandle|null;
+    if (login === null) {
       onDone(`{"error": "No Login Link Detected."}`);
       return;
     }
+    console.log("DCM: Search Login Link : DONE");
 
     // Go to Login page.
-    await loginLink.click();
+    await login.click();
     await page.waitForNavigation();
+    console.log("DCM: Click Login Link : DONE");
 
     // Input ID.
     await page.type('input[id="Di_Uid"]', functions.config().dcm.id);
+    console.log("DCM: Input UID : DONE");
     const idButton = await page.$("input.button_submit.nextaction") as ElementHandle;
+    console.log("DCM: Search UID Submit Button : DONE");
     await idButton.click();
+    console.log("DCM: Click UID Submit Button : DONE");
     await page.waitForNavigation();
 
     // Input Pass.
     await page.type('input[id="Di_Pass"]', functions.config().dcm.pass);
+    console.log("DCM: Input Pass : DONE");
     const passButton = await page.$("input.button_submit.nextaction") as ElementHandle;
+    console.log("DCM: Search Pass Submit Button : DONE");
     await passButton.click();
+    console.log("DCM: Click Pass Submit Button : DONE");
     await page.waitForNavigation();
 
     // Wait for contents rendering.
     await page.waitForSelector("section#mydcm_data_3day");
+    console.log("DCM: Wait for 3 Days Data : DONE");
     await page.waitForSelector("section#mydcm_data_month");
+    console.log("DCM: Wait for Month Data : DONE");
 
     // Go to 3-day detail page.
     await page.goto(DCM_3DAY_DETAIL_URL, { waitUntil: "networkidle0" });
     await page.waitForSelector("div#content");
+    console.log("DCM: Wait for 3 Days Data Detail : DONE");
 
     // Parse yesterday used.
     const yesterdayUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(3) td:nth-child(2) tr td:nth-child(1) span";
@@ -87,10 +82,12 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     yesterdayUsed = yesterdayUsed.replace(/,/g, "");
     yesterdayUsed = yesterdayUsed.replace("KB", "");
     const yesterdayUsedMb: number = Math.round(parseInt(yesterdayUsed) / 1000); // Convert KB to MB.
+    console.log("DCM: Parse 3 Days Data : DONE");
 
     // Go to month detail page.
     await page.goto(DCM_MONTH_DETAIL_URL, { waitUntil: "networkidle0" });
     await page.waitForSelector("div#content");
+    console.log("DCM: Wait for Month Data Detail : DONE");
 
     // Parse month used.
     const monthUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(2) td:nth-child(2) tr td:nth-child(2) p";
@@ -99,6 +96,7 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     monthUsed = monthUsed.replace("(", "");
     monthUsed = monthUsed.replace(")", "");
     const monthUsedMb: number = Math.round(parseInt(monthUsed) / 1000); // Convert KB to MB.
+    console.log("DCM: Parse Month Data : DONE");
 
     await browser.close();
 
