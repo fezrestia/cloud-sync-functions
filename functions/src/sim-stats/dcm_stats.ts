@@ -13,8 +13,8 @@ const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
 const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
 const DCM_LOGIN_URL_INCLUDE = `${DCM_HOST_URL}/mydocomo`;
-const DCM_3DAY_DETAIL_URL = "https://www.mydocomo.com/dcm/dfw/bis/guide/charges/gkyap001.srv";
-const DCM_MONTH_DETAIL_URL = "https://www.mydocomo.com/dcm/dfw/bis/guide/charges/gkyap001.srv?Xitraffic=1";
+const DCM_3DAY_DETAIL_URL = "https://payment2.smt.docomo.ne.jp/pcguide/charges/gkyap001.srv";
+const DCM_MONTH_DETAIL_URL = "https://payment2.smt.docomo.ne.jp/pcguide/charges/gkyap001.srv?Xitraffic=1";
 
 const DCM_FIREBASE_DB_PATH = "dcm-sim-usage/logs";
 export const DCM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${DCM_FIREBASE_DB_PATH}`;
