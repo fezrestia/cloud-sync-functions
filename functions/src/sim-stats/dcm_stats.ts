@@ -11,10 +11,8 @@ import { genBrowser, genPage, asyncUpdateFirebaseDatabase } from "../web_driver"
 const DCM_VALID_URL_PATTERN = "docomo";
 const DCM_HOST_URL = "https://www.nttdocomo.co.jp";
 const DCM_TOP_URL = `${DCM_HOST_URL}/mydocomo/data`;
-const DCM_LOGIN_URL = `${DCM_HOST_URL}/auth/cgi`;
-const DCM_LOGIN_URL_INCLUDE = `${DCM_HOST_URL}/mydocomo`;
-const DCM_3DAY_DETAIL_URL = "https://payment2.smt.docomo.ne.jp/pcguide/charges/gkyap001.srv";
-const DCM_MONTH_DETAIL_URL = "https://payment2.smt.docomo.ne.jp/pcguide/charges/gkyap001.srv?Xitraffic=1";
+
+const DCM_INVALID_USED_MB = -1;
 
 const DCM_FIREBASE_DB_PATH = "dcm-sim-usage/logs";
 export const DCM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/${DCM_FIREBASE_DB_PATH}`;
@@ -26,6 +24,8 @@ export const DCM_FIREBASE_DB_ROOT = `https://cloud-sync-service.firebaseio.com/$
  */
 export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
   try {
+    console.log("DCM: doUpdateDcmStats() : E");
+
     const browser = await genBrowser();
     const page = await genPage(browser, DCM_VALID_URL_PATTERN);
 
@@ -71,32 +71,47 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
     await page.waitForSelector("section#mydcm_data_month");
     console.log("DCM: Wait for Month Data : DONE");
 
-    // Go to 3-day detail page.
-    await page.goto(DCM_3DAY_DETAIL_URL, { waitUntil: "networkidle0" });
-    await page.waitForSelector("div#content");
-    console.log("DCM: Wait for 3 Days Data Detail : DONE");
+    // Parse day used.
+    let yesterdayUsed: string = "";
+    let yesterdayUsedMb: number = DCM_INVALID_USED_MB;
+    const yesterdayUsedSelector = [
+        "p#mydcm_data_3day-02_graph",
+        "svg",
+        "g.bottom-bar-val",
+        "g.tick:nth-of-type(2)",
+        "text",
+    ];
+    const dayUsedElm: ElementHandle|null = await page.$(yesterdayUsedSelector.join(" "));
+    if (dayUsedElm === null) {
+      onDone(`{"error": "No day used element found."}`);
+    } else {
+      const text = await dayUsedElm.getProperty("textContent") as ElementHandle;
+      yesterdayUsed = await text.jsonValue();
+      yesterdayUsedMb = Math.round(parseFloat(yesterdayUsed) * 1000); // Convert GB -> MB
+      console.log(`DCM: yesterdayUsedMb = ${yesterdayUsedMb}`);
+    }
+    console.log("DCM: Parse yesterdayUsedMb : DONE");
 
-    // Parse yesterday used.
-    const yesterdayUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(3) td:nth-child(2) tr td:nth-child(1) span";
-    let yesterdayUsed: string = await parseTextFromSelector(page, yesterdayUsedSelector);
-    yesterdayUsed = yesterdayUsed.replace(/,/g, "");
-    yesterdayUsed = yesterdayUsed.replace("KB", "");
-    const yesterdayUsedMb: number = Math.round(parseInt(yesterdayUsed) / 1000); // Convert KB to MB.
-    console.log("DCM: Parse 3 Days Data : DONE");
-
-    // Go to month detail page.
-    await page.goto(DCM_MONTH_DETAIL_URL, { waitUntil: "networkidle0" });
-    await page.waitForSelector("div#content");
-    console.log("DCM: Wait for Month Data Detail : DONE");
-
-    // Parse month used.
-    const monthUsedSelector = "div#content table.charge-data01 tbody tr:nth-child(2) td:nth-child(2) tr td:nth-child(2) p";
-    let monthUsed: string = await parseTextFromSelector(page, monthUsedSelector);
-    monthUsed = monthUsed.replace(/,/g, "");
-    monthUsed = monthUsed.replace("(", "");
-    monthUsed = monthUsed.replace(")", "");
-    const monthUsedMb: number = Math.round(parseInt(monthUsed) / 1000); // Convert KB to MB.
-    console.log("DCM: Parse Month Data : DONE");
+    // Parse month used current.
+    let monthUsed: string = "";
+    let monthUsedMb: number = DCM_INVALID_USED_MB;
+    const monthUsedSelector = [
+        "div#mydcm_data_month-03",
+        "dl:first-of-type",
+        "dd",
+        "p",
+        "span.latest-area-foma-monthly-gb-value",
+    ];
+    const monthUsedElm: ElementHandle|null = await page.$(monthUsedSelector.join(" "));
+    if (monthUsedElm === null) {
+      onDone(`{"error": "No month used element found."}`);
+    } else {
+      const text = await monthUsedElm.getProperty("textContent") as ElementHandle;
+      monthUsed = await text.jsonValue();
+      monthUsedMb = Math.round(parseFloat(monthUsed) * 1000); // Convert GB -> MB
+      console.log(`DCM: monthUsedMb = ${monthUsedMb}`);
+    }
+    console.log("DCM: Parse monthUsedMb : DONE");
 
     await browser.close();
 
@@ -128,9 +143,13 @@ export async function doUpdateDcmStats(onDone: (resJson: string) => void) {
         isYesterdayOk ? "OK" : "NG");
 
     onDone(resJson);
+
+    console.log("DCM: doUpdateDcmStats() : X");
     return;
   } catch(e) {
     onDone(genErrorMsg(e.toString()));
+
+    console.log("DCM: doUpdateDcmStats() : X");
     return;
   }
 }
