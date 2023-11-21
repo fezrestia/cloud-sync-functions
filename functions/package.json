@@ -14,16 +14,16 @@
   "main": "dst/entry.js",
   "dependencies": {
     "express": "^4.18.2",
-    "firebase": "^8.3.1",
+    "firebase": "^10.6.0",
     "firebase-admin": "^11.11.0",
     "firebase-functions": "^4.5.0",
-    "puppeteer": "8.0.0"
+    "puppeteer": "21.5.2"
   },
   "devDependencies": {
-    "@types/express": "^4.17.11",
-    "@types/puppeteer": "^5.4.3",
+    "@types/express": "^4.17.21",
+    "@types/puppeteer": "^5.4.7",
     "tslint": "^6.1.2",
-    "typescript": "^4.2.3"
+    "typescript": "^5.3.2"
   },
   "private": true,
   "engines": {
